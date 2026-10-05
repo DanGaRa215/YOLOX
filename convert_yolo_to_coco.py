@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Convert YOLO txt dataset (Roboflow) to COCO format for YOLOX.
+"""YOLO txt 形式のデータセット (Roboflow) を YOLOX 用の COCO 形式に変換する。
 
-Output layout (under --out):
-  train2017/ val2017/ test2017/           images (copy or symlink)
+出力レイアウト（--out 以下）:
+  train2017/ val2017/ test2017/           画像（コピーまたは symlink）
   annotations/instances_{train,val,test}2017.json
 
-Label rows: 5 columns (cls cx cy w h) = bbox; >5 columns (cls x1 y1 x2 y2 ...) = polygon
--> converted to bbox by min/max of vertices. Decided by column count.
-category_id is 1-based (1: cable tower, 2: turbine). YOLOX COCODataset maps via
-sorted(coco.getCatIds()).index(category_id), so either base works; 1-based is the COCO convention.
+ラベル行: 5 列 (cls cx cy w h) = bbox、5 列超 (cls x1 y1 x2 y2 ...) = ポリゴン
+-> 頂点の min/max で bbox に変換する。列数で判定する。
+category_id は 1 始まり（1: cable tower, 2: turbine）。YOLOX の COCODataset は
+sorted(coco.getCatIds()).index(category_id) で対応づけるのでどちらの始まりでも動くが、COCO の慣例は 1 始まりである。
 """
 import argparse, json, os, shutil, sys
 from collections import Counter
@@ -20,7 +20,7 @@ IMG_EXT = {".jpg", ".jpeg", ".png", ".bmp"}
 
 
 def parse_label(path):
-    """Yield (cls, x_min, y_min, x_max, y_max, is_polygon) normalized."""
+    """正規化済みの (cls, x_min, y_min, x_max, y_max, is_polygon) を返す。"""
     out = []
     if not path.exists():
         return out

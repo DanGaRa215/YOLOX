@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Run a YOLOX tools/*.py script with cudnn.benchmark forced off (unless CUDNN_BENCHMARK=1).
+"""YOLOX の tools/*.py スクリプトを cudnn.benchmark を強制的にオフにして実行する（CUDNN_BENCHMARK=1 のときを除く）。
 
-tools/train.py sets `cudnn.benchmark = True`; with multiscale training every new input size
-triggers a cuDNN algorithm search. This wrapper makes that assignment a no-op without editing YOLOX.
-Usage: python run_nobench.py tools/train.py <train.py args...>
+tools/train.py は `cudnn.benchmark = True` を設定する。マルチスケール学習では入力サイズが
+変わるたびに cuDNN のアルゴリズム探索が走る。このラッパーは YOLOX を編集せずにその代入を無効化する。
+使い方: python run_nobench.py tools/train.py <train.py の引数...>
 """
 import os
 import runpy

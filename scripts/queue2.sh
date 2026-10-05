@@ -1,5 +1,5 @@
 #!/bin/bash
-# Trains + evaluates C, B, A in sequence (cudnn.benchmark off via run_nobench.py, default 4 workers).
+# C, B, A を順に学習・評価する（run_nobench.py で cudnn.benchmark オフ、ワーカーは既定の 4）。
 cd /content/YOLOX
 export PYTHONPATH=/content/YOLOX YOLOX_DATA_DIR=/content/datasets/windfarm TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
 OUT=/content/drive/MyDrive/windfarm_outputs

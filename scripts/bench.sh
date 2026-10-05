@@ -1,5 +1,5 @@
 #!/bin/bash
-# Waits for the baseline, evaluates it, then times cudnn.benchmark on vs off (same exp, 2 workers).
+# ベースラインの学習完了を待って評価し、続けて cudnn.benchmark の on/off で所要時間を計測する（同じ exp、ワーカー 2）。
 cd /content/YOLOX
 export PYTHONPATH=/content/YOLOX YOLOX_DATA_DIR=/content/datasets/windfarm TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
 OUT=/content/drive/MyDrive/windfarm_outputs

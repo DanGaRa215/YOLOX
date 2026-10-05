@@ -1,4 +1,4 @@
-"""Validate converted COCO JSON and draw sample boxes into vis_check/."""
+"""変換後の COCO JSON を検証し、サンプルの bbox を vis_check/ に描画する。"""
 import json, random, sys
 from collections import Counter
 from pathlib import Path

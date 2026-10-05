@@ -1,33 +1,34 @@
 #!/usr/bin/env python3
-# Improvement (A): oversample train images that contain "cable tower".
-# Only change vs. yolox_s_windfarm.py: the training dataset is wrapped in a *virtual* index view
-# in which every image containing >=1 cable tower appears K times.
+# 改善 (A): "cable tower" を含む学習画像をオーバーサンプリングする。
+# yolox_s_windfarm.py との違いはこの一点のみ: 学習データセットを *仮想* インデックスビューで包み、
+# cable tower を 1 つ以上含む画像が K 回ずつ現れるようにする。
 #
-# Env vars (in addition to the baseline ones):
-#   OVERSAMPLE_K         repeat factor K for cable-tower images (int >= 1), default 3
-#   OVERSAMPLE_CLASS_ID  COCO category_id to oversample, default 1 (cable tower)
+# 環境変数（ベースラインのものに加えて）:
+#   OVERSAMPLE_K         cable tower 画像の繰り返し倍率 K（整数 >= 1）。既定 3
+#   OVERSAMPLE_CLASS_ID  オーバーサンプリング対象の COCO category_id。既定 1 (cable tower)
 #
-# Train:  python tools/train.py -f exps/yolox_s_windfarm_oversample.py -c yolox_s.pth -d 1 -b 16 --fp16 -o --cache ram
+# 学習:  python tools/train.py -f exps/yolox_s_windfarm_oversample.py -c yolox_s.pth -d 1 -b 16 --fp16 -o --cache ram
 #
-# Design notes (verified against YOLOX main):
-#  * MosaicDetection draws the main index from the sampler (range(len(MosaicDetection)) == len(view)),
-#    the 3 extra mosaic images via random.randint(0, len(self._dataset)-1), and the mixup partner via
-#    random.randint(0, self.__len__()-1). All of these index the view, so all three are weighted.
-#  * The view only maps index -> base index; images are NOT duplicated, so `--cache ram`
-#    (CacheDataset.imgs, built on the original 2643 images before get_data_loader) uses the original memory.
-#  * One epoch = len(view) samples, i.e. the epoch gets longer by (K-1)*n_cable_tower_images iterations.
-#  * close_mosaic() only flips batch_sampler.mosaic, so the no-aug phase still works; oversampling
-#    stays active there too (main index comes from the same sampler). Eval datasets are untouched.
+# 設計メモ（YOLOX main で確認済み）:
+#  * MosaicDetection は、メインのインデックスをサンプラー（range(len(MosaicDetection)) == len(view)）から、
+#    Mosaic の追加 3 枚を random.randint(0, len(self._dataset)-1) から、MixUp の相手を
+#    random.randint(0, self.__len__()-1) から引く。いずれもビューを参照するため、3 つとも重み付けされる。
+#  * ビューは index -> ベースの index を対応づけるだけで、画像は複製しない。したがって `--cache ram`
+#    （CacheDataset.imgs。get_data_loader より前に元の 2643 枚で構築される）は元のメモリ量のままである。
+#  * 1 エポック = len(view) サンプルなので、エポックは (K-1)*(cable tower 画像数) イテレーション長くなる。
+#  * close_mosaic() は batch_sampler.mosaic を切り替えるだけなので no-aug フェーズも動作し、
+#    オーバーサンプリングもそこで有効なままである（メインのインデックスは同じサンプラーから来る）。
+#    評価用データセットは変更しない。
 import os
 
 import numpy as np
 
-# tools/train.py puts the exp file's directory on sys.path, so the baseline is importable by name.
+# tools/train.py は exp ファイルのディレクトリを sys.path に追加するため、ベースラインを名前で import できる。
 from yolox_s_windfarm import Exp as BaseExp
 
 
 class OversampledDataset:
-    """Index view over a COCODataset: index i -> base index idx_map[i]. No image is copied."""
+    """COCODataset に対するインデックスビュー: index i -> ベースのインデックス idx_map[i]。画像はコピーしない。"""
 
     def __init__(self, base, idx_map):
         self._base = base
@@ -42,7 +43,7 @@ class OversampledDataset:
     def load_anno(self, index):
         return self._base.load_anno(self._idx_map[index])
 
-    # MosaicDetection reads `dataset.input_dim` and assigns `dataset._input_dim`; forward both to the base.
+    # MosaicDetection は `dataset.input_dim` を読み、`dataset._input_dim` に代入するため、どちらもベースへ転送する。
     @property
     def input_dim(self):
         return self._base.input_dim
@@ -55,7 +56,7 @@ class OversampledDataset:
     def _input_dim(self, value):
         self._base._input_dim = value
 
-    def __getattr__(self, name):  # only called when normal lookup fails
+    def __getattr__(self, name):  # 通常の属性検索に失敗したときのみ呼ばれる
         if name in ("_base", "_idx_map"):
             raise AttributeError(name)
         return getattr(self._base, name)
@@ -64,7 +65,7 @@ class OversampledDataset:
 class Exp(BaseExp):
     def __init__(self):
         super().__init__()
-        # BaseExp derives exp_name from its own __file__; keep outputs in a separate dir.
+        # BaseExp は自身の __file__ から exp_name を決めるため、出力を別ディレクトリに分ける。
         self.exp_name = os.path.splitext(os.path.basename(__file__))[0]
         self.oversample_k = int(os.environ.get("OVERSAMPLE_K", "3"))
         if self.oversample_k < 1:
@@ -86,7 +87,7 @@ class Exp(BaseExp):
     def get_data_loader(self, batch_size, is_distributed, no_aug=False, cache_img: str = None):
         from loguru import logger
 
-        # Same preconditions as the base class: with a cache, train.py already built self.dataset.
+        # 基底クラスと同じ前提: キャッシュ使用時は train.py が self.dataset を構築済みである。
         if self.dataset is None:
             assert cache_img is None, "cache_img must be None if you didn't create self.dataset before launch"
             self.dataset = self.get_dataset(cache=False, cache_type=cache_img)

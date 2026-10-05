@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-# YOLOX-s baseline for Wind Farms (cable tower / turbine). Defaults kept except dataset/epochs.
+# Wind Farms (cable tower / turbine) 用の YOLOX-s ベースライン。データセットとエポック数以外は既定値のまま。
 #
-# Env vars:
-#   YOLOX_DATA_DIR  dataset root (contains train2017/ val2017/ test2017/ annotations/); default datasets/windfarm
-#   EVAL_SPLIT      "val" (default) or "test"  -> chooses eval images dir + annotation file
+# 環境変数:
+#   YOLOX_DATA_DIR  データセットのルート（train2017/ val2017/ test2017/ annotations/ を含む）。既定 datasets/windfarm
+#   EVAL_SPLIT      "val"（既定）または "test"  -> 評価用の画像ディレクトリとアノテーションファイルを選ぶ
 #
-# Train:  python tools/train.py -f exps/yolox_s_windfarm.py -d 1 -b 16 --fp16 -o -c yolox_s.pth
-# Eval on test: EVAL_SPLIT=test python tools/eval.py -f exps/yolox_s_windfarm.py -c <ckpt> -b 16 -d 1 --conf 0.001
+# 学習:  python tools/train.py -f exps/yolox_s_windfarm.py -d 1 -b 16 --fp16 -o -c yolox_s.pth
+# test での評価: EVAL_SPLIT=test python tools/eval.py -f exps/yolox_s_windfarm.py -c <ckpt> -b 16 -d 1 --conf 0.001
 import os
 
 from yolox.exp import Exp as MyExp
@@ -21,7 +21,7 @@ class Exp(MyExp):
         self.num_classes = 2
         self.exp_name = os.path.splitext(os.path.basename(__file__))[0]
 
-        # data
+        # データ
         self.data_dir = os.environ.get("YOLOX_DATA_DIR", "datasets/windfarm")
         self.train_ann = "instances_train2017.json"
         self.val_ann = "instances_val2017.json"
@@ -30,7 +30,7 @@ class Exp(MyExp):
         if self.eval_split not in ("val", "test"):
             raise ValueError("EVAL_SPLIT must be val or test")
 
-        # schedule (baseline)
+        # スケジュール（ベースライン）
         self.max_epoch = 25
         self.no_aug_epochs = 8
         self.eval_interval = 5

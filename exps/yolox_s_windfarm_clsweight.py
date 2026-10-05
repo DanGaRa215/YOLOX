@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
-# Measure (B): class-weighted classification loss (emphasise cable tower). Only the cls loss differs
-# from the baseline (exps/yolox_s_windfarm.py); schedule/data/aug are inherited unchanged.
+# 施策 (B): クラス重み付き分類損失（cable tower を重視）。ベースライン (exps/yolox_s_windfarm.py) との
+# 違いは cls loss のみで、スケジュール・データ・拡張はそのまま継承する。
 #
-# Hypothesis: cable tower is ~35x rarer than turbine (441 vs 15534 train instances), so the cls loss
-# is dominated by turbine anchors. Up-weighting the anchors assigned to a cable tower should raise
-# its recall/AP.
+# 仮説: cable tower は turbine より約 35 倍少ない（学習インスタンス 441 対 15534）ため、cls loss は
+# turbine のアンカーに支配される。cable tower に割り当てられたアンカーの重みを上げれば、
+# その recall/AP が上がるはずである。
 #
-# Env vars (in addition to the baseline's YOLOX_DATA_DIR / EVAL_SPLIT):
-#   CLS_WEIGHTS  "w0,w1" per-class weights, index 0 = cable tower, 1 = turbine (default "4.0,1.0")
-#   CLS_PRIOR    "n0,n1" class counts used only for normalisation (default "441,15534" = train)
+# 環境変数（ベースラインの YOLOX_DATA_DIR / EVAL_SPLIT に加えて）:
+#   CLS_WEIGHTS  "w0,w1" クラスごとの重み。index 0 = cable tower, 1 = turbine（既定 "4.0,1.0"）
+#   CLS_PRIOR    "n0,n1" 正規化にのみ使うクラス数（既定 "441,15534" = train）
 #
-# Scheme: each foreground anchor gets the weight of its matched GT class, applied to ALL class logits
-# of that anchor (target = one-hot * IoU: the positive and the 0-target of the other class).
-# For the cable-tower logit this up-weights positives (tower anchors) while its negatives (turbine
-# anchors) keep weight ~1, i.e. it shifts the pos/neg balance. (A per-logit-column weight would scale
-# pos and neg of that logit equally and not change the balance.) Non-fg anchors are not in YOLOX's
-# cls loss at all. Obj and reg losses are untouched.
-# Normalisation: weights are divided by sum_c(w_c * p_c), p_c = CLS_PRIOR frequency, so the expected
-# weight per fg anchor is 1 and the cls-loss scale stays ~ baseline (with "4,1": tower 3.69,
-# turbine 0.92). Static, so no per-batch fluctuation. CLS_WEIGHTS="1,1" == baseline loss exactly.
+# 方式: 各 fg アンカーに、対応する GT クラスの重みを掛け、そのアンカーの全クラスロジットに適用する
+# （target = one-hot * IoU。正例と、他クラスの 0 ターゲットの両方）。
+# cable tower のロジットでは正例（tower アンカー）の重みが上がり、負例（turbine アンカー）の重みは
+# 約 1 のままなので、正負のバランスが動く。（ロジット列ごとに重みを掛ける方式では、そのロジットの
+# 正例と負例が同じ倍率になりバランスは変わらない。）fg でないアンカーは YOLOX の cls loss に
+# そもそも含まれない。obj loss と reg loss は変更しない。
+# 正規化: 重みを sum_c(w_c * p_c)（p_c は CLS_PRIOR による頻度）で割り、fg アンカー当たりの
+# 期待重みを 1 にして cls loss のスケールをベースライン並みに保つ（"4,1" なら tower 3.69,
+# turbine 0.92）。静的なのでバッチごとの変動はない。CLS_WEIGHTS="1,1" ならベースラインの損失と完全に一致する。
 #
-# get_losses below is a copy of upstream YOLOXHead.get_losses; changed lines are marked [CLSW].
+# 以下の get_losses は上流 YOLOXHead.get_losses のコピーで、変更行には [CLSW] を付けてある。
 #
-# Train:  python tools/train.py -f exps/yolox_s_windfarm_clsweight.py -d 1 -b 16 --fp16 -o -c yolox_s.pth
+# 学習:  python tools/train.py -f exps/yolox_s_windfarm_clsweight.py -d 1 -b 16 --fp16 -o -c yolox_s.pth
 import os
 
 import torch
@@ -31,7 +31,7 @@ from loguru import logger
 
 from yolox.models import YOLOXHead
 
-from yolox_s_windfarm import Exp as BaseExp  # same dir (exps/) is on sys.path, like the baseline
+from yolox_s_windfarm import Exp as BaseExp  # ベースラインと同様、同じディレクトリ (exps/) が sys.path にある
 
 
 def _parse_floats(env_name, default, n):
@@ -45,7 +45,7 @@ class ClsWeightedHead(YOLOXHead):
     def __init__(self, *args, cls_weights=None, **kwargs):
         super().__init__(*args, **kwargs)
         w = torch.tensor(cls_weights, dtype=torch.float32)
-        # non-persistent: keeps state_dict identical to the baseline's (checkpoints stay compatible)
+        # 非永続バッファ: state_dict をベースラインと同一に保つ（チェックポイント互換）
         self.register_buffer("cls_weights", w, persistent=False)
 
     def get_losses(
@@ -63,8 +63,8 @@ class ClsWeightedHead(YOLOXHead):
         obj_preds = outputs[:, :, 4:5]  # [batch, n_anchors_all, 1]
         cls_preds = outputs[:, :, 5:]  # [batch, n_anchors_all, n_cls]
 
-        # calculate targets
-        nlabel = (labels.sum(dim=2) > 0).sum(dim=1)  # number of objects
+        # ターゲットの計算
+        nlabel = (labels.sum(dim=2) > 0).sum(dim=1)  # 物体数
 
         total_num_anchors = outputs.shape[1]
         x_shifts = torch.cat(x_shifts, 1)  # [1, n_anchors_all]
@@ -74,7 +74,7 @@ class ClsWeightedHead(YOLOXHead):
             origin_preds = torch.cat(origin_preds, 1)
 
         cls_targets = []
-        cls_weights = []  # [CLSW] per-fg-anchor weight (by matched gt class)
+        cls_weights = []  # [CLSW] fg アンカーごとの重み（対応する GT クラスで決まる）
         reg_targets = []
         l1_targets = []
         obj_targets = []
@@ -118,9 +118,9 @@ class ClsWeightedHead(YOLOXHead):
                         obj_preds,
                     )
                 except RuntimeError as e:
-                    # TODO: the string might change, consider a better way
+                    # TODO: 文字列が変わる可能性があるため、より良い方法を検討する
                     if "CUDA out of memory. " not in str(e):
-                        raise  # RuntimeError might not caused by CUDA OOM
+                        raise  # CUDA OOM 以外の RuntimeError の可能性がある
 
                     logger.error(
                         "OOM RuntimeError is raised due to the huge memory cost during label assignment. \
@@ -193,7 +193,7 @@ class ClsWeightedHead(YOLOXHead):
             self.bcewithlog_loss(
                 cls_preds.view(-1, self.num_classes)[fg_masks], cls_targets
             )
-            * cls_weights  # [CLSW] scales all class logits of each fg anchor
+            * cls_weights  # [CLSW] 各 fg アンカーの全クラスロジットに重みを掛ける
         ).sum() / num_fg
         if self.use_l1:
             loss_l1 = (
@@ -218,7 +218,7 @@ class ClsWeightedHead(YOLOXHead):
 class Exp(BaseExp):
     def __init__(self):
         super().__init__()
-        # baseline derives exp_name from ITS __file__; override so outputs do not collide
+        # ベースラインは自身の __file__ から exp_name を決めるため、出力が衝突しないよう上書きする
         self.exp_name = os.path.splitext(os.path.basename(__file__))[0]
         w = _parse_floats("CLS_WEIGHTS", "4.0,1.0", self.num_classes)
         prior = _parse_floats("CLS_PRIOR", "441,15534", self.num_classes)
@@ -226,7 +226,7 @@ class Exp(BaseExp):
         self.cls_weights = [wi / norm for wi in w]
 
     def get_model(self):
-        # copy of upstream Exp.get_model with the head swapped for ClsWeightedHead
+        # 上流の Exp.get_model のコピー。head を ClsWeightedHead に差し替えている
         import torch.nn as nn
         from yolox.models import YOLOX, YOLOPAFPN
 

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Per-class and overall Precision/Recall for a YOLOX model at fixed conf/NMS, IoU=0.5.
+"""YOLOX モデルのクラス別および全体の Precision/Recall を、固定の conf/NMS・IoU=0.5 で求める。
 
-Run in Colab from the YOLOX repo root (needs torch, yolox, cv2):
+Colab で YOLOX リポジトリのルートから実行する（torch, yolox, cv2 が必要）:
   python eval_pr.py -f exps/yolox_s_windfarm.py -c YOLOX_outputs/yolox_s_windfarm/best_ckpt.pth \
       --data-dir /content/datasets/windfarm --split test --conf 0.3 --nms 0.45 --out results/baseline_test
 
-Matching: per image & class, predictions sorted by score; each is matched to the unmatched GT
-with highest IoU (>= iou thr). TP/FP/FN summed over the dataset; P=TP/(TP+FP), R=TP/(TP+FN).
-Outputs <out>.json and <out>.csv. Run tools/eval.py separately for COCO mAP.
+マッチング: 画像・クラスごとに予測をスコア降順に並べ、各予測を、未マッチの GT のうち
+IoU が最大のもの（iou 閾値以上）に対応づける。TP/FP/FN はデータセット全体で合計し、
+P=TP/(TP+FP)、R=TP/(TP+FN) とする。
+<out>.json と <out>.csv を出力する。COCO mAP は tools/eval.py を別途実行する。
 """
 import argparse, csv, json, os
 from pathlib import Path
@@ -22,7 +23,7 @@ def iou_xyxy(a, b):
 
 def compute_pr(gts, preds, class_names, iou_thr=0.5, conf_thr=0.3):
     """gts: {img_id: [(cls, [x1,y1,x2,y2]), ...]}; preds: {img_id: [(cls, score, [x1,y1,x2,y2]), ...]}.
-    cls is 0-based index into class_names."""
+    cls は class_names への 0 始まりのインデックス。"""
     n = len(class_names)
     tp, fp, fn = [0] * n, [0] * n, [0] * n
     for img in set(gts) | set(preds):
