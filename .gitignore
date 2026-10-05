@@ -1,0 +1,15 @@
+# environments / caches
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# data (Roboflow "Wind Farms" v5, CC BY 4.0) — kept out of git, see README
+datasets/
+datasets_upload/
+*.zip
+vis_check/
+
+# training outputs
+YOLOX_outputs/
+*.pth
