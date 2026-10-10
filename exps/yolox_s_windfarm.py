@@ -31,8 +31,8 @@ class Exp(MyExp):
             raise ValueError("EVAL_SPLIT must be val or test")
 
         # スケジュール（ベースライン）
-        self.max_epoch = 25
-        self.no_aug_epochs = 8
+        self.max_epoch = 50
+        self.no_aug_epochs = 15
         self.eval_interval = 5
         self.print_interval = 50
 

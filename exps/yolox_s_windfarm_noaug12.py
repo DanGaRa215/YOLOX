@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-# 施策 (C): close-mosaic 期間を延長する。no_aug_epochs を 8 -> 12 にする（max_epoch は 25 のままなので、
-# Mosaic/MixUp を使うのはエポック 1-17 ではなく 1-13 になる）。それ以外はベースラインと同じ。
+# 施策 (C): close-mosaic 期間を延長する。no_aug_epochs をベースラインの 15 -> 25 にする（max_epoch は 50 なので、
+# Mosaic/MixUp を使うのはエポック 1-35 ではなく 1-25 になる）。それ以外はベースラインと同じ。
+# ファイル名の noaug12 は、25 エポックで実験していたとき（no_aug_epochs 8 -> 12）の名残。
 #
 # 仮説: Mosaic/MixUp の合成で大きな cable tower（sqrt(area) の中央値が約 200px）が切断・縮小され、
 # モデルが無傷の tower を見る機会が少ない。拡張なし（元画像、L1 loss オン）の最終フェーズを
@@ -17,4 +18,4 @@ class Exp(BaseExp):
         super().__init__()
         # ベースラインは自身の __file__ から exp_name を決めるため、出力が衝突しないよう上書きする
         self.exp_name = os.path.splitext(os.path.basename(__file__))[0]
-        self.no_aug_epochs = 12
+        self.no_aug_epochs = 25
