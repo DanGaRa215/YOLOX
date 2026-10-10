@@ -17,6 +17,7 @@ Roboflow の "Wind Farms" v5 データセット（CC BY 4.0、作者 Kyle Graupe
 | `exps/yolox_s_windfarm_noaug12.py` | (C) close-mosaic 期間を延長: `no_aug_epochs=12` |
 | `exps/yolox_s_windfarm_clsweight.py` | (B) クラス重み付き cls loss（`CLS_WEIGHTS`、既定 `4,1`） |
 | `exps/yolox_s_windfarm_oversample.py` | (A) cable tower を含む画像をオーバーサンプリング（`OVERSAMPLE_K`、既定 3） |
+| `exps/yolox_s_windfarm_ecbam_portrait.py` | (D+E) E-CBAM 入りモデル（`_ecbam.py`）+ 縦長写真の Repeat Factor Sampling（`_portrait.py`） |
 
 ## 評価
 `eval_pr.py` は IoU 0.5、conf 0.3、NMS 0.45 でクラス別および micro の Precision / Recall を出力する
@@ -36,6 +37,11 @@ seed 違いの結果をまとめた表（平均 ± 標準偏差、本数 n つ�
   n=1 のときは `±` を付けず平均だけ。ある指標だけ本数が少ないときは `(n=2)` のように付く。
 - `Δ` 列はベースライン（`yolox_s_windfarm` のグループ）との平均の差（P・R・AP はポイント、TP・FP・FN は件数）。
 - `--out` を付けると、この表が `.md` と `.csv` に書かれる。
+
+## ローカル GPU（Windows + RTX 50 系）での一括実行
+`scripts/run_experiments.py` が実験リスト（`scripts/experiments_local.json`）を順に学習・評価する。Python だけで動き、
+中断しても同じコマンドで続きから再開できる。手順は [`docs/local_gpu.md`](docs/local_gpu.md) を参照
+（`--dry-run` でコマンドだけ表示、`--only <name>` で 1 本だけ実行。テストは `python test_run_experiments.py`）。
 
 ## Colab での実行
 `colab_setup.md` を参照。`scripts/` には Colab で実際に使ったヘルパーがある。

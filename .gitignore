@@ -21,3 +21,6 @@ YOLOX_outputs/
 results_e50/
 ckpt_e50/
 outputs_mps/
+
+# 一括実行スクリプトの出力先
+outputs_local/
