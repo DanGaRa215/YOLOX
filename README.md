@@ -28,6 +28,16 @@ Roboflow の "Wind Farms" v5 データセット（CC BY 4.0、作者 Kyle Graupe
 `python summarize_results.py --results-dir results --out results/summary` で `.md` と `.csv` を書き、Markdown は標準出力にも出す
 （未実施の実験・split は「未実施」と表示。テストは `python test_summarize_results.py`）。
 
+### seed をまたいだ集計（`--aggregate-seeds`）
+`python summarize_results.py --results-dir results --aggregate-seeds --out results/summary_seeds` で、
+seed 違いの結果をまとめた表（平均 ± 標準偏差、本数 n つき）を出す。付けなければ従来の表のまま。
+- グループ化: 実験名の末尾の `_s<数字>` を取り除いた名前でまとめる。末尾にそれが無い名前（例 `yolox_s_windfarm`）は seed 1 として
+  同じグループに入る（`yolox_s_windfarm` と `yolox_s_windfarm_s2` は同じグループ）。名前の途中の `_s_` には反応しない。
+- 指標: クラス別（cable tower / turbine / 全体）の P・R・TP・FP・FN と AP50・AP50:95。標準偏差は標本標準偏差（n-1）。
+  n=1 のときは `±` を付けず平均だけ。ある指標だけ本数が少ないときは `(n=2)` のように付く。
+- `Δ` 列はベースライン（`yolox_s_windfarm` のグループ）との平均の差（P・R・AP はポイント、TP・FP・FN は件数）。
+- `--out` を付けると、この表が `.md` と `.csv` に書かれる。
+
 ## ローカル GPU（Windows + RTX 50 系）での一括実行
 `scripts/run_experiments.py` が実験リスト（`scripts/experiments_local.json`）を順に学習・評価する。Python だけで動き、
 中断しても同じコマンドで続きから再開できる。手順は [`docs/local_gpu.md`](docs/local_gpu.md) を参照
