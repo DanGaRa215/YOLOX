@@ -12,6 +12,9 @@ P=TP/(TP+FP)、R=TP/(TP+FN) とする。
 
 --save-preds <path> を付けると、推論した全予測（conf 閾値をかける前のもの）を別の JSON に保存する
 （analyze_errors.py の入力になる）。指定しなければ保存せず、出力・挙動は従来どおり。
+
+末尾に YOLOX の train.py / eval.py と同じ形式の上書き（キーと値の組）を置ける。例: ... test_size "(800,800)"
+入力サイズを変えて学習したモデルを、同じ test_size で評価するために使う。指定しなければ従来どおり。
 """
 import argparse, csv, json, os
 from pathlib import Path
@@ -151,12 +154,16 @@ def main():
                     help="推論した全予測（conf 閾値適用前）を JSON に保存する。未指定なら保存しない")
     ap.add_argument("--save-conf", type=float, default=0.01,
                     help="--save-preds 指定時の推論用 conf 下限（既定 0.01）。P/R の計算は従来どおり --conf で行う")
+    ap.add_argument("opts", nargs=argparse.REMAINDER,
+                    help="exp の属性の上書き（キー 値 の組。例: test_size \"(800,800)\"）。exp.merge に渡す")
     a = ap.parse_args()
 
     from yolox.exp import get_exp
     os.environ["YOLOX_DATA_DIR"] = a.data_dir
     os.environ["EVAL_SPLIT"] = a.split
     exp = get_exp(a.exp_file, None)
+    if a.opts:
+        exp.merge(a.opts)
     name = {"val": "val2017", "test": "test2017"}[a.split]
     imgs, gts, names = load_gt(Path(a.data_dir) / "annotations" / f"instances_{name}.json")
     # 保存時だけ推論の conf 下限を下げる。P/R は compute_pr 側で --conf を適用するので値は変わらない

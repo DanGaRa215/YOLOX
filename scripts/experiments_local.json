@@ -1,0 +1,13 @@
+[
+  {"name": "yolox_s_windfarm_s2", "exp": "yolox_s_windfarm", "seed": 2, "opts": {}},
+  {"name": "yolox_s_windfarm_s3", "exp": "yolox_s_windfarm", "seed": 3, "opts": {}},
+  {"name": "yolox_s_windfarm_ecbam_s2", "exp": "yolox_s_windfarm_ecbam", "seed": 2, "opts": {}},
+  {"name": "yolox_s_windfarm_ecbam_s3", "exp": "yolox_s_windfarm_ecbam", "seed": 3, "opts": {}},
+  {"name": "yolox_s_windfarm_portrait_s2", "exp": "yolox_s_windfarm_portrait", "seed": 2, "opts": {}},
+  {"name": "yolox_s_windfarm_portrait_s3", "exp": "yolox_s_windfarm_portrait", "seed": 3, "opts": {}},
+  {"name": "yolox_s_windfarm_ecbam_portrait_s1", "exp": "yolox_s_windfarm_ecbam_portrait", "seed": 1, "opts": {}},
+  {"name": "yolox_s_windfarm_ecbam_in800_s1", "exp": "yolox_s_windfarm_ecbam", "seed": 1,
+   "opts": {"input_size": "(800,800)", "test_size": "(800,800)"}},
+  {"name": "yolox_s_windfarm_ecbam_e100_s1", "exp": "yolox_s_windfarm_ecbam", "seed": 1,
+   "opts": {"max_epoch": 100}}
+]
