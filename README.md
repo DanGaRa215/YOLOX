@@ -17,6 +17,7 @@ Roboflow の "Wind Farms" v5 データセット（CC BY 4.0、作者 Kyle Graupe
 | `exps/yolox_s_windfarm_noaug12.py` | (C) close-mosaic 期間を延長: `no_aug_epochs=12` |
 | `exps/yolox_s_windfarm_clsweight.py` | (B) クラス重み付き cls loss（`CLS_WEIGHTS`、既定 `4,1`） |
 | `exps/yolox_s_windfarm_oversample.py` | (A) cable tower を含む画像をオーバーサンプリング（`OVERSAMPLE_K`、既定 3） |
+| `exps/yolox_s_windfarm_ecbam_portrait.py` | (D+E) E-CBAM 入りモデル（`_ecbam.py`）+ 縦長写真の Repeat Factor Sampling（`_portrait.py`） |
 
 ## 評価
 `eval_pr.py` は IoU 0.5、conf 0.3、NMS 0.45 でクラス別および micro の Precision / Recall を出力する
