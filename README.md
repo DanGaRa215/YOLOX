@@ -22,6 +22,11 @@ Roboflow の "Wind Farms" v5 データセット（CC BY 4.0、作者 Kyle Graupe
 `eval_pr.py` は IoU 0.5、conf 0.3、NMS 0.45 でクラス別および micro の Precision / Recall を出力する
 （`test_eval_pr.py` はそのマッチング処理の単体テスト）。COCO mAP は YOLOX の `tools/eval.py` で求める。
 
+`summarize_results.py` は `results/` の `<exp名>_{val,test}.json`（eval_pr の出力）と
+`<exp名>_{val,test}_cocomap.txt`（tools/eval.py のログ）から、実験 × split の比較表（ベースラインとの差分つき）を作る。
+`python summarize_results.py --results-dir results --out results/summary` で `.md` と `.csv` を書き、Markdown は標準出力にも出す
+（未実施の実験・split は「未実施」と表示。テストは `python test_summarize_results.py`）。
+
 ## Colab での実行
 `colab_setup.md` を参照。`scripts/` には Colab で実際に使ったヘルパーがある。
 `run_nobench.py`（`cudnn.benchmark` をオフにして YOLOX のツールを実行）、`queue2.sh`（3 つの
