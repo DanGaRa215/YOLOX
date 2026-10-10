@@ -16,3 +16,8 @@ YOLOX_outputs/
 
 # Claude Code の作業用フォルダ
 .claude/
+
+# Colab から取ってきた評価結果
+results_e50/
+ckpt_e50/
+outputs_mps/
