@@ -28,6 +28,11 @@ Roboflow の "Wind Farms" v5 データセット（CC BY 4.0、作者 Kyle Graupe
 `python summarize_results.py --results-dir results --out results/summary` で `.md` と `.csv` を書き、Markdown は標準出力にも出す
 （未実施の実験・split は「未実施」と表示。テストは `python test_summarize_results.py`）。
 
+## ローカル GPU（Windows + RTX 50 系）での一括実行
+`scripts/run_experiments.py` が実験リスト（`scripts/experiments_local.json`）を順に学習・評価する。Python だけで動き、
+中断しても同じコマンドで続きから再開できる。手順は [`docs/local_gpu.md`](docs/local_gpu.md) を参照
+（`--dry-run` でコマンドだけ表示、`--only <name>` で 1 本だけ実行。テストは `python test_run_experiments.py`）。
+
 ## Colab での実行
 `colab_setup.md` を参照。`scripts/` には Colab で実際に使ったヘルパーがある。
 `run_nobench.py`（`cudnn.benchmark` をオフにして YOLOX のツールを実行）、`queue2.sh`（3 つの
