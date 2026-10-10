@@ -9,6 +9,9 @@ Colab で YOLOX リポジトリのルートから実行する（torch, yolox, cv
 IoU が最大のもの（iou 閾値以上）に対応づける。TP/FP/FN はデータセット全体で合計し、
 P=TP/(TP+FP)、R=TP/(TP+FN) とする。
 <out>.json と <out>.csv を出力する。COCO mAP は tools/eval.py を別途実行する。
+
+--save-preds <path> を付けると、推論した全予測（conf 閾値をかける前のもの）を別の JSON に保存する
+（analyze_errors.py の入力になる）。指定しなければ保存せず、出力・挙動は従来どおり。
 """
 import argparse, csv, json, os
 from pathlib import Path
@@ -21,6 +24,33 @@ def iou_xyxy(a, b):
     return inter / ua if ua > 0 else 0.0
 
 
+def select_preds(preds_img, c, conf_thr):
+    """1 枚の画像の予測 [(cls, score, box), ...] から、クラス c で score が conf_thr 以上のものを
+    score 降順（同点は元の順）に並べた [(score, box), ...] を返す。"""
+    return sorted([(s, b) for k, s, b in preds_img if k == c and s >= conf_thr], key=lambda x: -x[0])
+
+
+def match_greedy(g_boxes, p_sorted, iou_thr):
+    """1 画像・1 クラス分のマッチング。p_sorted は select_preds の結果（score 降順）。
+    各予測を、未使用の GT のうち IoU が最大のもの（iou_thr 以上）に対応づける。
+    戻り値: (matches, used)。matches[i] は p_sorted[i] に対応した GT の添字（なければ -1 で FP）、
+    used[j] は g_boxes[j] がマッチ済みか（False なら FN）。"""
+    used = [False] * len(g_boxes)
+    matches = []
+    for s, b in p_sorted:
+        best, bj = iou_thr, -1
+        for j, gb in enumerate(g_boxes):
+            if used[j]:
+                continue
+            v = iou_xyxy(b, gb)
+            if v >= best:
+                best, bj = v, j
+        if bj >= 0:
+            used[bj] = True
+        matches.append(bj)
+    return matches, used
+
+
 def compute_pr(gts, preds, class_names, iou_thr=0.5, conf_thr=0.3):
     """gts: {img_id: [(cls, [x1,y1,x2,y2]), ...]}; preds: {img_id: [(cls, score, [x1,y1,x2,y2]), ...]}.
     cls は class_names への 0 始まりのインデックス。"""
@@ -29,21 +59,11 @@ def compute_pr(gts, preds, class_names, iou_thr=0.5, conf_thr=0.3):
     for img in set(gts) | set(preds):
         for c in range(n):
             g = [b for k, b in gts.get(img, []) if k == c]
-            p = sorted([(s, b) for k, s, b in preds.get(img, []) if k == c and s >= conf_thr], key=lambda x: -x[0])
-            used = [False] * len(g)
-            for s, b in p:
-                best, bj = iou_thr, -1
-                for j, gb in enumerate(g):
-                    if used[j]:
-                        continue
-                    v = iou_xyxy(b, gb)
-                    if v >= best:
-                        best, bj = v, j
-                if bj >= 0:
-                    used[bj] = True
-                    tp[c] += 1
-                else:
-                    fp[c] += 1
+            p = select_preds(preds.get(img, []), c, conf_thr)
+            matches, used = match_greedy(g, p, iou_thr)
+            n_tp = sum(1 for m in matches if m >= 0)
+            tp[c] += n_tp
+            fp[c] += len(matches) - n_tp
             fn[c] += used.count(False)
 
     def row(name, t, f, m):
@@ -101,6 +121,19 @@ def predict(exp, ckpt, imgs, img_dir, conf, nms, device, fp16, fuse):
     return preds
 
 
+def save_preds(path, preds, imgs, class_names, meta):
+    """全予測を JSON に保存する。bbox は元画像座標の xyxy、クラスは 0 始まりの添字と名前の両方を持つ。"""
+    rows = []
+    for iid in sorted(preds):
+        for k, s, b in preds[iid]:
+            rows.append({"image_id": iid, "file_name": imgs[iid]["file_name"], "class": k,
+                         "class_name": class_names[k], "score": s, "bbox_xyxy": b})
+    out = {"meta": dict(meta, class_names=class_names, n_images=len(imgs)), "predictions": rows}
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("-f", "--exp-file", required=True)
@@ -114,6 +147,10 @@ def main():
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--fp16", action="store_true")
     ap.add_argument("--fuse", action="store_true")
+    ap.add_argument("--save-preds", default=None, metavar="PATH",
+                    help="推論した全予測（conf 閾値適用前）を JSON に保存する。未指定なら保存しない")
+    ap.add_argument("--save-conf", type=float, default=0.01,
+                    help="--save-preds 指定時の推論用 conf 下限（既定 0.01）。P/R の計算は従来どおり --conf で行う")
     a = ap.parse_args()
 
     from yolox.exp import get_exp
@@ -122,7 +159,13 @@ def main():
     exp = get_exp(a.exp_file, None)
     name = {"val": "val2017", "test": "test2017"}[a.split]
     imgs, gts, names = load_gt(Path(a.data_dir) / "annotations" / f"instances_{name}.json")
-    preds = predict(exp, a.ckpt, imgs, Path(a.data_dir) / name, a.conf, a.nms, a.device, a.fp16, a.fuse)
+    # 保存時だけ推論の conf 下限を下げる。P/R は compute_pr 側で --conf を適用するので値は変わらない
+    infer_conf = min(a.conf, a.save_conf) if a.save_preds else a.conf
+    preds = predict(exp, a.ckpt, imgs, Path(a.data_dir) / name, infer_conf, a.nms, a.device, a.fp16, a.fuse)
+    if a.save_preds:
+        save_preds(a.save_preds, preds, imgs, names,
+                   {"split": a.split, "ckpt": a.ckpt, "nms": a.nms, "infer_conf": infer_conf,
+                    "test_size": list(exp.test_size)})
     rows = compute_pr(gts, preds, names, a.iou, a.conf)
     res = {"split": a.split, "ckpt": a.ckpt, "conf": a.conf, "nms": a.nms, "iou": a.iou,
            "test_size": list(exp.test_size), "n_images": len(imgs), "results": rows}
