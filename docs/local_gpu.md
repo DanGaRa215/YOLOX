@@ -1,6 +1,6 @@
 # ローカル GPU（Windows + RTX 50 系）で追加実験を回す手順
 
-友人の PC（Windows + RTX 5070 Ti など）で、`scripts/run_experiments.py` により追加実験 9 本を一晩で回す手順。
+友人の PC（Windows + RTX 5070 Ti など）で、`scripts/run_experiments.py` により追加実験 12 本を一晩で回す手順。
 結果は `results/` を zip にして返してもらう。
 
 **注意: この手順は Windows の実機では確認していない。** Python 側のコマンド組み立てはテスト
@@ -10,12 +10,16 @@
 ## 回す実験（`scripts/experiments_local.json`）
 | 出力名 | 内容 |
 |---|---|
-| `yolox_s_windfarm_s2`, `_s3` | ベースライン、seed 2, 3 |
-| `yolox_s_windfarm_ecbam_s2`, `_s3` | 施策 D（E-CBAM）、seed 2, 3 |
-| `yolox_s_windfarm_portrait_s2`, `_s3` | 施策 E（縦長写真の RFS）、seed 2, 3 |
+| `yolox_s_windfarm_s1`, `_s2`, `_s3` | ベースライン、seed 1, 2, 3 |
+| `yolox_s_windfarm_ecbam_s1`, `_s2`, `_s3` | 施策 D（E-CBAM）、seed 1, 2, 3 |
+| `yolox_s_windfarm_portrait_s1`, `_s2`, `_s3` | 施策 E（縦長写真の RFS）、seed 1, 2, 3 |
 | `yolox_s_windfarm_ecbam_portrait_s1` | D+E の組み合わせ、seed 1 |
 | `yolox_s_windfarm_ecbam_in800_s1` | D を入力 800px（`input_size` / `test_size` = 800x800）、seed 1 |
 | `yolox_s_windfarm_ecbam_e100_s1` | D を 100 エポック（`max_epoch` = 100）、seed 1 |
+
+`_s1` の 3 本（ベースライン・D・E）は後から追加した。Colab の T4 で回した 1 本目を、同じ環境・固定 seed で回し直し、
+3 seed をすべて同じ環境にそろえるため。前回の出力（`outputs_local`）を残したまま同じコマンドを実行すれば、
+終わった 9 本は DONE で飛ばされ、この 3 本だけが回る。
 
 seed を指定した学習は cuDNN の deterministic モードが有効になり、遅くなることがある（YOLOX の仕様）。
 
@@ -75,7 +79,7 @@ python verify_coco.py    # 任意: 件数の確認
 ```powershell
 python scripts\run_experiments.py --yolox-dir ..\YOLOX --data-dir datasets\windfarm --out-dir outputs_local --dry-run
 ```
-問題なければ本番（9 本を順に学習・評価）:
+問題なければ本番（12 本を順に学習・評価。DONE のものは飛ばす）:
 ```powershell
 python scripts\run_experiments.py --yolox-dir ..\YOLOX --data-dir datasets\windfarm --out-dir outputs_local
 ```

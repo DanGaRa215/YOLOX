@@ -1,6 +1,6 @@
 """scripts/run_experiments.py のテスト。実際の学習は走らせない（dry-run と純粋関数だけ）。
 
-  * 実験リスト JSON（scripts/experiments_local.json）の中身（9 本、名前の規則）
+  * 実験リスト JSON（scripts/experiments_local.json）の中身（12 本、名前の規則）
   * seed / opts がコマンドの末尾に渡ること、seed が null なら付かないこと
   * 状態（fresh / resume / eval_only / done）による resume・skip の切り替え
   * 入力サイズを変えた実験で、評価にも test_size が渡ること
@@ -44,10 +44,10 @@ def dry_run_output(argv):
 class ListTest(unittest.TestCase):
     def test_local_list(self):
         items = R.load_experiments(R.DEFAULT_LIST)
-        self.assertEqual(len(items), 9)
+        self.assertEqual(len(items), 12)
         by = {e["name"]: e for e in items}
         for base in ("yolox_s_windfarm", "yolox_s_windfarm_ecbam", "yolox_s_windfarm_portrait"):
-            for s in (2, 3):
+            for s in (1, 2, 3):
                 self.assertEqual(by[f"{base}_s{s}"]["exp"], base)
                 self.assertEqual(by[f"{base}_s{s}"]["seed"], s)
         self.assertEqual(by["yolox_s_windfarm_ecbam_portrait_s1"]["exp"], "yolox_s_windfarm_ecbam_portrait")
@@ -164,7 +164,7 @@ class StateTest(unittest.TestCase):
     def test_only_and_all(self):
         with tempfile.TemporaryDirectory() as t:
             base = ["--out-dir", t]
-            self.assertEqual(dry_run_output(base).count("[dry-run]"), 9)
+            self.assertEqual(dry_run_output(base).count("[dry-run]"), 12)
             self.assertEqual(dry_run_output(base + ["--only", "yolox_s_windfarm_ecbam_e100_s1"]).count("[dry-run]"), 1)
             self.assertIn("max_epoch 100", dry_run_output(base + ["--only", "yolox_s_windfarm_ecbam_e100_s1"]))
             with contextlib.redirect_stderr(io.StringIO()):
